@@ -8,90 +8,96 @@ namespace nstl {
     class vector{
     public:
         vector(size_t initial_capacity = 1){
-            capacity = initial_capacity;
-            length = 0;
-            data = allocator.allocate(capacity);
+            _capacity = initial_capacity;
+            _length = 0;
+            _data = _allocator.allocate(_capacity);
         }
         ~vector(){
             clear();
-            if (data){
-                allocator.deallocate(data, capacity);
+            if (_data){
+                _allocator.deallocate(_data, _capacity);
             }
         }
-        vector(const vector& other): capacity(other.capacity), length(other.length) {
-            data = allocator.allocate(capacity);
-            std::uninitialized_copy(other.data, other.data + other.length, data);
+        vector(const vector& other): _capacity(other._capacity), _length(other._length) {
+            _data = _allocator.allocate(_capacity);
+            std::uninitialized_copy(other._data, other._data + other._length, _data);
         }
         vector& operator=(vector other) {
-            std::swap(data, other.data);
-            std::swap(capacity, other.capacity);
-            std::swap(length, other.length);
+            std::swap(_data, other._data);
+            std::swap(_capacity, other._capacity);
+            std::swap(_length, other._length);
             return *this;
         }
 
-        vector(vector&& other) noexcept : capacity(other.capacity), length(other.length), data(other.data) {
-            other.capacity = 0;
-            other.length = 0;
-            other.data = nullptr;
+        vector(vector&& other) noexcept : _capacity(other._capacity), _length(other._length), _data(other._data) {
+            other._capacity = 0;
+            other._length = 0;
+            other._data = nullptr;
         }
 
         void push_back(const T& value){
-            if (length == capacity){
-                resize();
+            if (_length == _capacity){
+                size_t new_capacity = (_capacity == 0) ? 1 : _capacity * 2;
+                resize(new_capacity);
             }
-            std::construct_at(&data[length], value);
-            length++;
+            std::construct_at(&_data[_length], value);
+            _length++;
         }
         void push_back(T&& value){
-            if (length == capacity){
-                resize();
+            if (_length == _capacity){
+                size_t new_capacity = (_capacity == 0) ? 1 : _capacity * 2;
+                resize(new_capacity);
             }
-            std::construct_at(&data[length], std::move(value));
-            length++;
+            std::construct_at(&_data[_length], std::move(value));
+            _length++;
         }
 
         void pop_back(){
-            if (length == 0){
+            if (_length == 0){
                 throw std::out_of_range("Error: Cannot pop_back when Vector is Empty");
             }
-            length--;
-            std::destroy_at(&data[length]);
+            _length--;
+            std::destroy_at(&_data[_length]);
         }
 
         const T& operator[](size_t idx) const noexcept {
-            return data[idx];
+            return _data[idx];
         }
         T& operator[](size_t idx) noexcept {
-            return data[idx];
+            return _data[idx];
         }
 
         const T& at(size_t idx) const {
-            if (idx >= length){
+            if (idx >= _length){
                 throw std::out_of_range("Error: Index out of bounds");
             }
-            return data[idx];
+            return _data[idx];
         }
         T& at(size_t idx){
-            if (idx >= length){
+            if (idx >= _length){
                 throw std::out_of_range("Error: Index out of bounds");
             }
-            return data[idx];
+            return _data[idx];
         }
 
         size_t size(){
-            return size;
+            return _length;
         }
 
         bool empty(){
-            return size == 0;
+            return _length == 0;
         }
 
         size_t capacity(){
-            return capacity;
+            return _capacity;
         }
 
         void reserve(size_t new_capacity){
-            //TODO
+            if (new_capacity <= _capacity){
+                return;
+            }
+            resize(new_capacity);
+            return;
         }
 
         void shrink_to_fit(){
@@ -99,27 +105,26 @@ namespace nstl {
         }
 
     private:
-        T* data;
-        size_t capacity;
-        size_t length;
-        std::allocator<T> allocator;
+        T* _data;
+        size_t _capacity;
+        size_t _length;
+        std::allocator<T> _allocator;
 
-        void resize(){
-            size_t new_capacity = (capacity == 0) ? 1 : capacity * 2;
-            T* new_data = allocator.allocate(new_capacity);
-            std::uninitialized_move(data, data + length, new_data);
+        void resize(size_t new_capacity){
+            T* new_data = _allocator.allocate(new_capacity);
+            std::uninitialized_move(_data, _data + _length, new_data);
 
-            std::destroy(data, data + length);
-            allocator.deallocate(data, capacity);
+            std::destroy(_data, _data + _length);
+            _allocator.deallocate(_data, _capacity);
 
-            data = new_data;
-            capacity = new_capacity;
+            _data = new_data;
+            _capacity = new_capacity;
         }
         void clear() noexcept {
-            for (size_t i = 0; i < length; i++){
-                std::destroy_at(&data[i]);
+            for (size_t i = 0; i < _length; i++){
+                std::destroy_at(&_data[i]);
             }
-            length = 0;
+            _length = 0;
         }
     };
 }
