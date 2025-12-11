@@ -7,6 +7,9 @@ namespace nstl {
     template<typename T>
     class vector{
     public:
+        using iterator = T*;
+        using const_iterator = const T*;
+        
         vector(size_t initial_capacity = 1){
             _capacity = initial_capacity;
             _length = 0;
@@ -80,17 +83,9 @@ namespace nstl {
             return _data[idx];
         }
 
-        size_t size(){
-            return _length;
-        }
-
-        bool empty(){
-            return _length == 0;
-        }
-
-        size_t capacity(){
-            return _capacity;
-        }
+        size_t size() const noexcept {return _length;}
+        bool empty() const noexcept {return _length == 0;}
+        size_t capacity() const noexcept {return _capacity;}
 
         void reserve(size_t new_capacity){
             if (new_capacity <= _capacity){
@@ -101,8 +96,19 @@ namespace nstl {
         }
 
         void shrink_to_fit(){
-            //TODO
+            if (_length == _capacity){
+                return;
+            }
+            resize(_length);
+            return;
         }
+
+        iterator begin() noexcept { return _data; }
+        iterator end() noexcept { return _data + _length; }
+        const_iterator begin() const noexcept { return _data; }
+        const_iterator end() const noexcept { return _data + _length; }
+        const_iterator cbegin() const noexcept { return _data; }
+        const_iterator cend() const noexcept { return _data + _length; }
 
     private:
         T* _data;
@@ -115,7 +121,10 @@ namespace nstl {
             std::uninitialized_move(_data, _data + _length, new_data);
 
             std::destroy(_data, _data + _length);
-            _allocator.deallocate(_data, _capacity);
+
+            if (_data){
+                _allocator.deallocate(_data, _capacity);
+            }
 
             _data = new_data;
             _capacity = new_capacity;
