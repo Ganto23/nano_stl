@@ -78,6 +78,26 @@ namespace nstl {
             return data[idx];
         }
 
+        size_t size(){
+            return size;
+        }
+
+        bool empty(){
+            return size == 0;
+        }
+
+        size_t capacity(){
+            return capacity;
+        }
+
+        void reserve(size_t new_capacity){
+            //TODO
+        }
+
+        void shrink_to_fit(){
+            //TODO
+        }
+
     private:
         T* data;
         size_t capacity;
