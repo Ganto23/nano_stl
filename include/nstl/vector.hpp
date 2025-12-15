@@ -3,6 +3,7 @@
 #include <memory>
 #include <iostream>
 #include <utility>
+#include <cstring>
 
 namespace nstl {
     template<typename T>
@@ -136,6 +137,44 @@ namespace nstl {
             _data = new_data;
             _capacity = new_capacity;
         }
+        
+       /*
+       void resize(size_t new_capacity) noexcept {
+            T* new_data = _allocator.allocate(new_capacity);
+
+            T* __restrict src = _data;
+            T* __restrict dst = new_data;
+            size_t count = _length;
+
+            for (size_t i = 0; i < count; ++i) {
+                new (static_cast<void*>(dst + i)) T(std::move(src[i]));
+            }
+
+            std::destroy(_data, _data + _length);
+            if (_data) [[likely]] {
+                _allocator.deallocate(_data, _capacity);
+            }
+
+            _data = new_data;
+            _capacity = new_capacity;
+        }
+        */
+        /*
+        void resize(size_t new_capacity) noexcept {
+            T* new_data = _allocator.allocate(new_capacity);
+            if (_length > 0) {
+                std::memcpy(new_data, _data, _length * sizeof(T));
+            }
+            
+            if (_data) {
+                _allocator.deallocate(_data, _capacity);
+            }
+
+            _data = new_data;
+            _capacity = new_capacity;
+        }
+        */
+
         void clear() noexcept {
             for (size_t i = 0; i < _length; i++){
                 std::destroy_at(&_data[i]);
