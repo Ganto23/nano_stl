@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <memory>
 #include <iostream>
+#include <utility>
 
 namespace nstl {
     template<typename T>
@@ -10,10 +11,17 @@ namespace nstl {
         using iterator = T*;
         using const_iterator = const T*;
         
-        vector(size_t initial_capacity = 1){
-            _capacity = initial_capacity;
-            _length = 0;
-            _data = _allocator.allocate(_capacity);
+        vector(): _capacity(0), _length(0), _data(nullptr) {}
+        explicit vector(size_t initial_capacity) {
+            if (initial_capacity > 0) [[likely]] {
+                _capacity = initial_capacity;
+                _length = 0;
+                _data = _allocator.allocate(_capacity);
+            } else {
+                _capacity = 0;
+                _length = 0;
+                _data = nullptr;
+            }
         }
         ~vector(){
             clear();
@@ -25,6 +33,11 @@ namespace nstl {
             _data = _allocator.allocate(_capacity);
             std::uninitialized_copy(other._data, other._data + other._length, _data);
         }
+        vector(vector&& other) noexcept : _capacity(other._capacity), _length(other._length), _data(other._data) {
+            other._capacity = 0;
+            other._length = 0;
+            other._data = nullptr;
+        }
         vector& operator=(vector other) {
             std::swap(_data, other._data);
             std::swap(_capacity, other._capacity);
@@ -32,14 +45,8 @@ namespace nstl {
             return *this;
         }
 
-        vector(vector&& other) noexcept : _capacity(other._capacity), _length(other._length), _data(other._data) {
-            other._capacity = 0;
-            other._length = 0;
-            other._data = nullptr;
-        }
-
         void push_back(const T& value){
-            if (_length == _capacity){
+            if (_length == _capacity) [[unlikely]] {
                 size_t new_capacity = (_capacity == 0) ? 1 : _capacity * 2;
                 resize(new_capacity);
             }
@@ -47,7 +54,7 @@ namespace nstl {
             _length++;
         }
         void push_back(T&& value){
-            if (_length == _capacity){
+            if (_length == _capacity) [[unlikely]] {
                 size_t new_capacity = (_capacity == 0) ? 1 : _capacity * 2;
                 resize(new_capacity);
             }
@@ -56,7 +63,7 @@ namespace nstl {
         }
 
         void pop_back(){
-            if (_length == 0){
+            if (_length == 0) [[unlikely]] {
                 throw std::out_of_range("Error: Cannot pop_back when Vector is Empty");
             }
             _length--;
@@ -71,13 +78,13 @@ namespace nstl {
         }
 
         const T& at(size_t idx) const {
-            if (idx >= _length){
+            if (idx >= _length) [[unlikely]] {
                 throw std::out_of_range("Error: Index out of bounds");
             }
             return _data[idx];
         }
         T& at(size_t idx){
-            if (idx >= _length){
+            if (idx >= _length) [[unlikely]] {
                 throw std::out_of_range("Error: Index out of bounds");
             }
             return _data[idx];
@@ -96,7 +103,7 @@ namespace nstl {
         }
 
         void shrink_to_fit(){
-            if (_length == _capacity){
+            if (_length == _capacity) [[unlikely]] {
                 return;
             }
             resize(_length);
@@ -111,10 +118,10 @@ namespace nstl {
         const_iterator cend() const noexcept { return _data + _length; }
 
     private:
-        T* _data;
+        [[no_unique_address]] std::allocator<T> _allocator;
         size_t _capacity;
         size_t _length;
-        [[no_unique_address]] std::allocator<T> _allocator;
+        T* _data;
 
         void resize(size_t new_capacity) noexcept {
             T* new_data = _allocator.allocate(new_capacity);
@@ -122,7 +129,7 @@ namespace nstl {
 
             std::destroy(_data, _data + _length);
 
-            if (_data){
+            if (_data) [[likely]] {
                 _allocator.deallocate(_data, _capacity);
             }
 
