@@ -114,9 +114,9 @@ namespace nstl {
         T* _data;
         size_t _capacity;
         size_t _length;
-        std::allocator<T> _allocator;
+        [[no_unique_address]] std::allocator<T> _allocator;
 
-        void resize(size_t new_capacity){
+        void resize(size_t new_capacity) noexcept {
             T* new_data = _allocator.allocate(new_capacity);
             std::uninitialized_move(_data, _data + _length, new_data);
 
