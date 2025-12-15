@@ -4,6 +4,7 @@
 #include <iostream>
 #include <utility>
 #include <cstring>
+#include <type_traits>
 
 namespace nstl {
     template<typename T>
@@ -47,16 +48,16 @@ namespace nstl {
         }
 
         void push_back(const T& value){
-            if (_length == _capacity) [[unlikely]] {
-                size_t new_capacity = (_capacity == 0) ? 1 : _capacity * 2;
+            if (_length == _capacity) {
+                size_t new_capacity = _capacity ? _capacity * 2 : 8;
                 resize(new_capacity);
             }
             std::construct_at(&_data[_length], value);
             _length++;
         }
-        void push_back(T&& value){
-            if (_length == _capacity) [[unlikely]] {
-                size_t new_capacity = (_capacity == 0) ? 1 : _capacity * 2;
+        void push_back(T&& value) noexcept {
+            if (_length == _capacity) {
+                size_t new_capacity = _capacity ? _capacity * 2 : 8;
                 resize(new_capacity);
             }
             std::construct_at(&_data[_length], std::move(value));
@@ -126,9 +127,17 @@ namespace nstl {
 
         void resize(size_t new_capacity) noexcept {
             T* new_data = _allocator.allocate(new_capacity);
-            std::uninitialized_move(_data, _data + _length, new_data);
 
-            std::destroy(_data, _data + _length);
+            // Optimization: Use memcpy for trivial types
+            if constexpr (std::is_trivially_copyable_v<T>) {
+                if (_length > 0) {
+                    std::memcpy(new_data, _data, _length * sizeof(T));
+                }
+                // No need to destroy trivial types
+            } else {
+                std::uninitialized_move(_data, _data + _length, new_data);
+                std::destroy(_data, _data + _length);
+            }
 
             if (_data) [[likely]] {
                 _allocator.deallocate(_data, _capacity);
@@ -137,43 +146,6 @@ namespace nstl {
             _data = new_data;
             _capacity = new_capacity;
         }
-        
-       /*
-       void resize(size_t new_capacity) noexcept {
-            T* new_data = _allocator.allocate(new_capacity);
-
-            T* __restrict src = _data;
-            T* __restrict dst = new_data;
-            size_t count = _length;
-
-            for (size_t i = 0; i < count; ++i) {
-                new (static_cast<void*>(dst + i)) T(std::move(src[i]));
-            }
-
-            std::destroy(_data, _data + _length);
-            if (_data) [[likely]] {
-                _allocator.deallocate(_data, _capacity);
-            }
-
-            _data = new_data;
-            _capacity = new_capacity;
-        }
-        */
-        /*
-        void resize(size_t new_capacity) noexcept {
-            T* new_data = _allocator.allocate(new_capacity);
-            if (_length > 0) {
-                std::memcpy(new_data, _data, _length * sizeof(T));
-            }
-            
-            if (_data) {
-                _allocator.deallocate(_data, _capacity);
-            }
-
-            _data = new_data;
-            _capacity = new_capacity;
-        }
-        */
 
         void clear() noexcept {
             for (size_t i = 0; i < _length; i++){
