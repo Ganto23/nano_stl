@@ -12,6 +12,8 @@ namespace nstl {
     public:
         using iterator = T*;
         using const_iterator = const T*;
+        //using reference = T&;
+        //using const_reference = const T&;
         
         vector(): _capacity(0), _length(0), _data(nullptr) {}
         explicit vector(size_t initial_capacity) {
@@ -62,6 +64,38 @@ namespace nstl {
             }
             std::construct_at(&_data[_length], std::move(value));
             _length++;
+        }
+
+        template <typename... Args>
+        constexpr T& emplace_back(Args&&... args){
+            T* new_element;
+            if (_length == _capacity){
+                size_t new_capacity = _capacity ? _capacity * 2 : 8;
+                T* new_data = _allocator.allocate(new_capacity);
+
+                new_element = std::construct_at(&new_data[_length], std::forward<Args>(args)...);
+
+                if constexpr (std::is_trivially_copyable_v<T>) {
+                    if (_length > 0) {
+                        std::memcpy(new_data, _data, _length * sizeof(T));
+                    }
+                } else {
+                    std::uninitialized_move(_data, _data + _length, new_data);
+                    std::destroy(_data, _data + _length);
+                }
+
+                if (_data) [[likely]] {
+                    _allocator.deallocate(_data, _capacity);
+                }
+
+                _data = new_data;
+                _capacity = new_capacity;
+                _length++;
+            } else {
+                new_element = std::construct_at(&_data[_length], std::forward<Args>(args)...);
+                _length++;
+            }
+            return *new_element;
         }
 
         void pop_back(){
@@ -128,12 +162,10 @@ namespace nstl {
         void resize(size_t new_capacity) noexcept {
             T* new_data = _allocator.allocate(new_capacity);
 
-            // Optimization: Use memcpy for trivial types
             if constexpr (std::is_trivially_copyable_v<T>) {
                 if (_length > 0) {
                     std::memcpy(new_data, _data, _length * sizeof(T));
                 }
-                // No need to destroy trivial types
             } else {
                 std::uninitialized_move(_data, _data + _length, new_data);
                 std::destroy(_data, _data + _length);
@@ -148,8 +180,10 @@ namespace nstl {
         }
 
         void clear() noexcept {
-            for (size_t i = 0; i < _length; i++){
-                std::destroy_at(&_data[i]);
+            if constexpr (!std::is_trivially_destructible_v<T>){
+                for (size_t i = 0; i < _length; i++){
+                    std::destroy_at(&_data[i]);
+                }
             }
             _length = 0;
         }
