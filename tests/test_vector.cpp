@@ -55,3 +55,47 @@ TEST(VectorTest, DeepCopy) {
     EXPECT_EQ(v1[0], 5);  // v1 should NOT change
     EXPECT_EQ(v2[0], 10); // v2 SHOULD change
 }
+
+struct ComplexObj {
+    int id;
+    std::string name;
+    
+    ComplexObj(int i, const std::string& n) : id(i), name(n) {}
+};
+
+// Test 5: Basic Emplace Functionality
+TEST(EmplaceTest, BasicEmplace) {
+    nstl::vector<ComplexObj> v;
+    
+    // Construct in-place: no temporary ComplexObj created
+    v.emplace_back(1, "First"); 
+    v.emplace_back(2, "Second");
+
+    EXPECT_EQ(v.size(), 2);
+    EXPECT_EQ(v[0].name, "First");
+    EXPECT_EQ(v[1].id, 2);
+}
+
+// Test 6: Return Type (Reference)
+TEST(EmplaceTest, ReturnsReference) {
+    nstl::vector<int> v;
+    int& ref = v.emplace_back(42);
+    
+    EXPECT_EQ(ref, 42);
+    ref = 100;
+    EXPECT_EQ(v[0], 100);
+}
+
+// Test 7: The "Aliasing" Edge Case
+TEST(EmplaceTest, SelfReferenceResize) {
+    nstl::vector<std::string> v;
+    v.push_back("Initial String");
+    
+    for (int i = 0; i < 20; ++i) {
+        v.emplace_back(v[0]); 
+    }
+    
+    for (size_t i = 0; i < v.size(); ++i) {
+        ASSERT_EQ(v[i], "Initial String") << "Failed at index " << i;
+    }
+}

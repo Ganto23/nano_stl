@@ -67,35 +67,13 @@ namespace nstl {
         }
 
         template <typename... Args>
-        constexpr T& emplace_back(Args&&... args){
-            T* new_element;
-            if (_length == _capacity){
-                size_t new_capacity = _capacity ? _capacity * 2 : 8;
-                T* new_data = _allocator.allocate(new_capacity);
-
-                new_element = std::construct_at(&new_data[_length], std::forward<Args>(args)...);
-
-                if constexpr (std::is_trivially_copyable_v<T>) {
-                    if (_length > 0) {
-                        std::memcpy(new_data, _data, _length * sizeof(T));
-                    }
-                } else {
-                    std::uninitialized_move(_data, _data + _length, new_data);
-                    std::destroy(_data, _data + _length);
-                }
-
-                if (_data) [[likely]] {
-                    _allocator.deallocate(_data, _capacity);
-                }
-
-                _data = new_data;
-                _capacity = new_capacity;
-                _length++;
-            } else {
-                new_element = std::construct_at(&_data[_length], std::forward<Args>(args)...);
-                _length++;
+        constexpr T& emplace_back(Args&&... args) {
+            if (_length == _capacity) [[unlikely]] {
+                return emplace_back_slow(std::forward<Args>(args)...);
             }
-            return *new_element;
+            T* ptr = std::construct_at(&_data[_length], std::forward<Args>(args)...);
+            _length++;
+            return *ptr;
         }
 
         void pop_back(){
@@ -186,6 +164,31 @@ namespace nstl {
                 }
             }
             _length = 0;
+        }
+
+        template <typename... Args>
+        __attribute__((noinline))
+        T& emplace_back_slow(Args&&... args) {
+            size_t new_capacity = _capacity ? _capacity * 2 : 8;
+            T* new_data = _allocator.allocate(new_capacity);
+
+            T* new_element = std::construct_at(&new_data[_length], std::forward<Args>(args)...);
+
+            if constexpr (std::is_trivially_copyable_v<T>) {
+                if (_length > 0) std::memcpy(new_data, _data, _length * sizeof(T));
+            } else {
+                for (size_t i = 0; i < _length; ++i) {
+                    std::construct_at(&new_data[i], std::move(_data[i]));
+                    std::destroy_at(&_data[i]);
+                }
+            }
+
+            if (_data) _allocator.deallocate(_data, _capacity);
+
+            _data = new_data;
+            _capacity = new_capacity;
+            _length++;
+            return *new_element;
         }
     };
 }

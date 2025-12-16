@@ -145,5 +145,53 @@ static void BM_NstlVector_PushBack_Heavy(benchmark::State& state){
 }
 BENCHMARK(BM_NstlVector_PushBack_Heavy)->Range(8, 1<<10);
 
-BENCHMARK_MAIN();
 
+struct HeavyConstruct {
+    std::string data;
+    int x, y, z;
+    
+    // Expensive construction (parsing/allocating)
+    HeavyConstruct(const char* s, int a, int b, int c) 
+        : data(s), x(a), y(b), z(c) {}
+        
+    // Move is relatively cheap (std::string move), but still non-zero
+};
+
+// Benchmark 1: Standard Vector Emplace
+static void BM_StdVector_Emplace(benchmark::State& state) {
+    for (auto _ : state) {
+        std::vector<HeavyConstruct> v;
+        v.reserve(state.range(0)); // Reserve to measure pure emplace speed vs push
+        for (int i = 0; i < state.range(0); ++i) {
+            v.emplace_back("Long string to prevent SSO", i, i, i);
+        }
+    }
+}
+BENCHMARK(BM_StdVector_Emplace)->Range(8, 1024);
+
+// Benchmark 2: NSTL Vector Emplace
+static void BM_NstlVector_Emplace(benchmark::State& state) {
+    for (auto _ : state) {
+        nstl::vector<HeavyConstruct> v;
+        v.reserve(state.range(0));
+        for (int i = 0; i < state.range(0); ++i) {
+            v.emplace_back("Long string to prevent SSO", i, i, i);
+        }
+    }
+}
+BENCHMARK(BM_NstlVector_Emplace)->Range(8, 1024);
+
+// Benchmark 3: NSTL Push_back (Control Group)
+// This creates a temporary object, then moves it. Should be slower.
+static void BM_NstlVector_Push(benchmark::State& state) {
+    for (auto _ : state) {
+        nstl::vector<HeavyConstruct> v;
+        v.reserve(state.range(0));
+        for (int i = 0; i < state.range(0); ++i) {
+            v.push_back(HeavyConstruct("Long string to prevent SSO", i, i, i));
+        }
+    }
+}
+BENCHMARK(BM_NstlVector_Push)->Range(8, 1024);
+
+BENCHMARK_MAIN();
