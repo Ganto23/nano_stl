@@ -9,19 +9,19 @@
 
 namespace nstl {
     template<typename T>
-    class UniquePtr {
+    class unique_ptr {
     public:
-        UniquePtr(): _ptr(nullptr) {}
-        explicit UniquePtr(T* ptr): _ptr(ptr) {}
-        ~UniquePtr(){delete _ptr;}
+        unique_ptr(): _ptr(nullptr) {}
+        explicit unique_ptr(T* ptr): _ptr(ptr) {}
+        ~unique_ptr(){delete _ptr;}
 
-        UniquePtr(const UniquePtr&) = delete;
-        UniquePtr& operator=(const UniquePtr&) = delete;
+        unique_ptr(const unique_ptr&) = delete;
+        unique_ptr& operator=(const unique_ptr&) = delete;
 
-        UniquePtr(UniquePtr&& other) noexcept: _ptr(other._ptr) {
+        unique_ptr(unique_ptr&& other) noexcept: _ptr(other._ptr) {
             other._ptr = nullptr;
         }
-        UniquePtr& operator=(UniquePtr&& other) noexcept {
+        unique_ptr& operator=(unique_ptr&& other) noexcept {
             if (this != &other){
                 delete _ptr;
                 _ptr = other._ptr;
