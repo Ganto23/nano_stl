@@ -171,3 +171,21 @@ TEST(UniquePtrBasic, NullptrBehavior) {
     EXPECT_FALSE(up == nullptr);
     EXPECT_TRUE(up != nullptr);
 }
+
+TEST(UniquePtrMeta, SizeMatchesRawPointer_DefaultDeleter) {
+    EXPECT_EQ(sizeof(nstl::unique_ptr<int>), sizeof(int*));
+    EXPECT_EQ(sizeof(nstl::unique_ptr<int[]>), sizeof(int*));
+}
+
+TEST(UniquePtrMeta, SizeWithCustomDeleter_MayBeLarger) {
+    using Deleter = void(*)(int*);
+    EXPECT_GE(sizeof(nstl::unique_ptr<int, Deleter>), sizeof(int*));
+}
+
+struct EmptyDeleter {
+    void operator()(int* p) const { delete p; }
+};
+
+TEST(UniquePtrMeta, SizeWithEmptyCustomDeleter_StillPointerSized) {
+    EXPECT_EQ(sizeof(nstl::unique_ptr<int, EmptyDeleter>), sizeof(int*));
+}
