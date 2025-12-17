@@ -6,6 +6,7 @@
 #include <cstring>
 #include <type_traits>
 #include <algorithm>
+#include <concepts>
 
 namespace nstl {
     template<typename T>
