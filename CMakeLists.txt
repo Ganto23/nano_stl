@@ -19,8 +19,10 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(unit_tests tests/test_vector.cpp)
-target_link_libraries(unit_tests PRIVATE nstl gtest_main)
+add_executable(vector_test tests/test_vector.cpp)
+target_link_libraries(vector_test PRIVATE nstl gtest_main)
+add_executable(unique_ptr_test tests/test_unique_ptr.cpp)
+target_link_libraries(unique_ptr_test PRIVATE nstl gtest_main)
 
 # --- 4. Benchmarking (Google Benchmark) ---
 FetchContent_Declare(

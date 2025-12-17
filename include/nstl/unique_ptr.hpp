@@ -6,6 +6,7 @@
 #include <cstring>
 #include <type_traits>
 #include <algorithm>
+#include <compare>
 
 namespace nstl {
 
@@ -24,6 +25,7 @@ namespace nstl {
     public:
         unique_ptr(): _ptr(nullptr) {}
         explicit unique_ptr(T* ptr): _ptr(ptr) {}
+        unique_ptr(T* ptr, Deleter d) : _ptr(ptr), _deleter(std::move(d)) {}
         ~unique_ptr(){if (_ptr) _deleter(_ptr);}
 
         unique_ptr(const unique_ptr&) = delete;
@@ -57,6 +59,10 @@ namespace nstl {
             _ptr = nullptr;
             return temp;
         }
+
+        auto operator<=>(const unique_ptr&) const = default;
+        bool operator==(std::nullptr_t) const noexcept { return _ptr == nullptr; }
+        bool operator!=(std::nullptr_t) const noexcept { return _ptr != nullptr; }
 
     private:
         T* _ptr = nullptr;
@@ -100,6 +106,10 @@ namespace nstl {
             _ptr = nullptr;
             return temp;
         }
+
+        auto operator<=>(const unique_ptr&) const = default;
+        bool operator==(std::nullptr_t) const noexcept { return _ptr == nullptr; }
+        bool operator!=(std::nullptr_t) const noexcept { return _ptr != nullptr; }
 
     private:
         T* _ptr = nullptr;
