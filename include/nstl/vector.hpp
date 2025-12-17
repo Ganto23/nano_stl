@@ -168,7 +168,7 @@ namespace nstl {
         size_t _capacity;
         size_t _length;
         T* _data;
-
+        
         constexpr void resize(size_t new_capacity) noexcept {
             T* new_data = _allocator.allocate(new_capacity);
 
@@ -201,7 +201,7 @@ namespace nstl {
         }
 
         template <typename... Args>
-        __attribute__((noinline))
+        //__attribute__((noinline, cold))
         constexpr T& emplace_back_slow(Args&&... args) {
             size_t new_capacity = _capacity ? _capacity * 2 : 8;
             T* new_data = _allocator.allocate(new_capacity);
