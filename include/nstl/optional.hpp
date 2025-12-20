@@ -12,8 +12,16 @@ namespace nstl {
     template<typename T>
     class optional {
     public:
+        optional(){}
+        optional(const optional& other){}
+        optional(optional&& other){}
+
+        ~optional(){}
+
+        T& operator=(const optional& other){}
+        T& operator=(optional&& other){}
 
     private:
-
+        T value;
     };
 }
