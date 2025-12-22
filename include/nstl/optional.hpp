@@ -18,12 +18,24 @@ namespace nstl {
     class optional {
     public:
         // CONSTRUCTORS
-        constexpr optional() noexcept;
-        constexpr optional(nullopt_t) noexcept;
-        constexpr optional(const T& value);
-        constexpr optional(T&& value);
-        template<class U> constexpr optional(const optional<U>&);
-        template<class U> constexpr optional(optional<U>&&);
+        constexpr optional() noexcept : dummy{}, engaged_(false){}
+        constexpr optional(nullopt_t) noexcept : dummy{}, engaged_(false){}
+        constexpr optional(const T& value) : value(v), engaged_(true){}
+        constexpr optional(T&& value) : value(std::move(v)), engaged_(true){}
+        template<class U> 
+        constexpr optional(const optional<U>& other) : dummy{}, engaged_(false) {
+            if (other.has_value()){
+                new (&value) T(other.value());
+                engaged_ = true;
+            }
+        }
+        template<class U> 
+        constexpr optional(optional<U>&& other) : dummy{}, engaged_(false) {
+            if (other.has_value()){
+                new (&value) T(std::move(other.value()));
+                engaged_ = true;
+            }
+        }
         constexpr optional(const optional& other){}
         constexpr optional(optional&& other){}
 
