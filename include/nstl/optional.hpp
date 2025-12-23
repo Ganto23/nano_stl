@@ -10,89 +10,162 @@
 
 namespace nstl {
     struct nullopt_t {
-        explicit constexpr nullopt_t(int) {}
+        explicit constexpr nullopt_t() = default;
     };
-    inline constexpr nullopt_t nullopt{0};
+    inline constexpr nullopt_t nullopt{};
 
     template<typename T>
     class optional {
     public:
         // CONSTRUCTORS
-        constexpr optional() noexcept : dummy{}, engaged_(false){}
-        constexpr optional(nullopt_t) noexcept : dummy{}, engaged_(false){}
-        constexpr optional(const T& value) : value(value), engaged_(true){}
-        constexpr optional(T&& value) : value(std::move(value)), engaged_(true){}
+        constexpr optional() noexcept : dummy_{}, engaged_(false){}
+        constexpr optional(nullopt_t) noexcept : dummy_{}, engaged_(false){}
+        constexpr optional(const T& value) : value_(value), engaged_(true){}
+        constexpr optional(T&& value) : value_(std::move(value)), engaged_(true){}
         template<class U> 
-        constexpr optional(const optional<U>& other) : dummy{}, engaged_(false) {
+        constexpr optional(const optional<U>& other) : dummy_{}, engaged_(false) {
             if (other.has_value()){
-                new (&value) T(other.value());
+                new (&value_) T(other.value());
                 engaged_ = true;
             }
         }
         template<class U> 
-        constexpr optional(optional<U>&& other) : dummy{}, engaged_(false) {
+        constexpr optional(optional<U>&& other) : dummy_{}, engaged_(false) {
             if (other.has_value()){
-                new (&value) T(std::move(other.value()));
+                new (&value_) T(std::move(other.value()));
                 engaged_ = true;
             }
         }
-        constexpr optional(const optional& other) : dummy{}, engaged_(false) {
+        constexpr optional(const optional& other) : dummy_{}, engaged_(false) {
             if (other.has_value()){
-                new (&value) T(other.value());
+                new (&value_) T(other.value());
                 engaged_ = true;
             }
         }
-        constexpr optional(optional&& other) : dummy{}, engaged_(false) {
+        constexpr optional(optional&& other) : dummy_{}, engaged_(false) {
             if (other.has_value()){
-                new (&value) T(std::move(other.value()));
+                new (&value_) T(std::move(other.value()));
                 engaged_ = true;
             }
         }
 
         ~optional(){
             if (engaged_) {
-                value.~T();
+                value_.~T();
             }
         }
 
         //Assignment and modifiers
-        constexpr optional& operator=(nullopt_t) noexcept;
-        constexpr optional& operator=(const optional&);
-        constexpr optional& operator=(optional&&);
+        constexpr optional& operator=(nullopt_t) noexcept {
+            reset();
+            return *this;
+        }
+        constexpr optional& operator=(const optional& other) {
+            reset();
+            if (other.has_value()){
+                new (&value_) T(other.value());
+                engaged_ = true;
+            }
+            return *this;
+        }
+        constexpr optional& operator=(optional&& other) {
+            reset();
+            if (other.has_value()){
+                new (&value_) T(std::move(other.value()));
+                engaged_ = true;
+            }
+            other.reset();
+            return *this;
+        }
         template<class U = T> 
-        constexpr optional& operator=(U&& value);
+        constexpr optional& operator=(U&& value) {
+            if (engaged_){
+                value_ = std::forward<U>(value);
+            } else {
+                new (&value_) T(std::forward<U>(value));
+                engaged_ = true;
+            }
+            return *this;
+        }
 
 
         template<class... Args> 
-        T& emplace(Args&&... args);
+        T& emplace(Args&&... args) {
+            reset();
+            new (&value_) T(std::forward<Args>(args)...);
+            engaged_ = true;
+            return value_;
+        }
 
-        constexpr void reset() noexcept;
-        constexpr void swap(optional& other) noexcept(...);
+        constexpr void reset() noexcept {
+            if (engaged_){
+                value_.~T();
+                engaged_ = false;
+            }
+        }
+        constexpr void swap(optional& other) noexcept {
+            if (engaged_ != other.engaged_) {
+                if (engaged_) {
+                    other.value_ = std::move(value_);
+                    other.engaged_ = true;
+                    reset();
+                } else {
+                    value_ = std::move(other.value_);
+                    engaged_ = true;
+                    other.reset();
+                }
+            } else if (engaged_) {
+                std::swap(value_, other.value_);
+            }
+        }
 
         //Observers
-        constexpr bool has_value() const noexcept;
-        constexpr explicit operator bool() const noexcept;
+        constexpr bool has_value() const noexcept {return engaged_;}
+        constexpr explicit operator bool() const noexcept {return engaged_;}
 
-        constexpr T& value();
-        constexpr const T& value() const;
-        constexpr T&& value() const noexcept;
+        constexpr T& value() {
+            if (engaged_) return value_;
+            throw std::bad_optional_access{};
+        }
+        constexpr const T& value() const {
+            if (engaged_) return value_;
+            throw std::bad_optional_access{};
+        }
 
-        constexpr T& operator*() &;
-        constexpr const T& operator*() const &;
-        constexpr T&& operator*() const noexcept &;
+        constexpr T& operator*() & {
+            if (!engaged_) throw std::bad_optional_access{};
+            return value_;
+        }
+        constexpr const T& operator*() const & {
+            if (!engaged_) throw std::bad_optional_access{};
+            return value_;
+        }
+        constexpr T&& operator*() && noexcept {return std::move(value_);}
 
-        constexpr T* operator->() noexcept;
-        constexpr const T* operator->() const noexcept;
+        constexpr T* operator->() noexcept {return &value_;}
+        constexpr const T* operator->() const noexcept {return &value_;}
 
         template<class U> 
-        constexpr T value_or(U&& default_value) const &;
+        constexpr T value_or(U&& default_value) const & {
+            if (engaged_){
+                return value_;
+            } else {
+                return static_cast<T>(std::forward<U>(default_value)); 
+            }
+        }
         template<class U> 
-        constexpr T value_or(U&& default_value) &&;        
+        constexpr T value_or(U&& default_value) && {
+            if (engaged_) {
+                return std::move(value_);
+            } else {
+                return static_cast<T>(std::forward<U>(default_value));
+            }
+        }    
 
     private:
         union {
-            char dummy;
-            T   value;
+            char dummy_;
+            T   value_;
         };
         bool engaged_ = false;
     };
