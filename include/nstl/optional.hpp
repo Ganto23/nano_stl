@@ -74,7 +74,6 @@ namespace nstl {
                 new (&value_) T(std::move(other.value()));
                 engaged_ = true;
             }
-            other.reset();
             return *this;
         }
         template<class U = T> 
@@ -103,19 +102,22 @@ namespace nstl {
                 engaged_ = false;
             }
         }
-        constexpr void swap(optional& other) noexcept {
-            if (engaged_ != other.engaged_) {
-                if (engaged_) {
-                    other.value_ = std::move(value_);
-                    other.engaged_ = true;
-                    reset();
-                } else {
-                    value_ = std::move(other.value_);
-                    engaged_ = true;
-                    other.reset();
-                }
-            } else if (engaged_) {
-                std::swap(value_, other.value_);
+        constexpr void swap(optional& other) noexcept(
+            std::is_nothrow_move_constructible_v<T> &&
+            std::is_nothrow_swappable_v<T>
+        ) {
+            using std::swap;
+
+            if (engaged_ && other.engaged_) {
+                swap(value_, other.value_);
+            } else if (engaged_ && !other.engaged_) {
+                new (&other.value_) T(std::move(value_));
+                other.engaged_ = true;
+                reset();
+            } else if (!engaged_ && other.engaged_) {
+                new (&value_) T(std::move(other.value_));
+                engaged_ = true;
+                other.reset();
             }
         }
 
