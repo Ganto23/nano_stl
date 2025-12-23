@@ -76,7 +76,7 @@ namespace nstl {
             }
             return *this;
         }
-        template<class U = T> 
+        template<class U = T, std::enable_if_t<!std::is_same_v<std::remove_cv_t<std::remove_reference_t<U>>, optional>, int> = 0> 
         constexpr optional& operator=(U&& value) {
             if (engaged_){
                 value_ = std::forward<U>(value);
