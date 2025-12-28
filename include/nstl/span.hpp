@@ -13,6 +13,8 @@ namespace nstl {
         explicit constexpr span(T* ptr, size_t count) noexcept : _ptr(ptr), _size(count) {}
         constexpr span(const span&) noexcept = default;
         constexpr span(span&&) noexcept = default;
+        template <size_t N>
+        constexpr span(T (&arr)[N]) noexcept : span(arr, N) {}
 
         constexpr span& operator=(const span&) noexcept = default;
         constexpr span& operator=(span&&) noexcept = default;
