@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <limits>
 #include <iterator>
+#include <nstl/vector.hpp>
 
 namespace nstl {
     inline constexpr size_t dynamic_extent = std::numeric_limits<size_t>::max();
@@ -13,8 +14,13 @@ namespace nstl {
         explicit constexpr span(T* ptr, size_t count) noexcept : _ptr(ptr), _size(count) {}
         constexpr span(const span&) noexcept = default;
         constexpr span(span&&) noexcept = default;
+
         template <size_t N>
-        constexpr span(T (&arr)[N]) noexcept : span(arr, N) {}
+        explicit constexpr span(T (&arr)[N]) noexcept : span(arr, N) {}
+        template <typename Alloc>
+        constexpr span(nstl::vector<T, Alloc>& vec) noexcept : span(vec.empty() ? nullptr : &vec[0], vec.size()) {}
+        template <typename Alloc>
+        constexpr span(const nstl::vector<T, Alloc>& vec) noexcept : span(vec.empty() ? nullptr : &vec[0], vec.size()) {}
 
         constexpr span& operator=(const span&) noexcept = default;
         constexpr span& operator=(span&&) noexcept = default;
@@ -84,6 +90,8 @@ namespace nstl {
         explicit constexpr span(T* ptr) noexcept : _ptr(ptr) {}
         constexpr span(const span&) noexcept = default;
         constexpr span(span&&) noexcept = default;
+
+        explicit constexpr span(T (&arr)[Extent]) noexcept : span(arr) {}
 
         constexpr span& operator=(const span&) noexcept = default;
         constexpr span& operator=(span&&) noexcept = default;
